@@ -1,12 +1,12 @@
-import pyrealsense2 as rs
-import numpy as np
-import cv2
-import time
 from datetime import datetime as dt
 from datetime import timedelta
+import time
+import cv2
+import numpy as np
+import pyrealsense2 as rs
 
 class D455(object):
-    def __init__(self, width, height, framerate, runtime=60):
+    def __init__(self, width, height, framerate, runtime, sv_path):
         r"""
         Realsense camera pipeline
         """
@@ -14,11 +14,12 @@ class D455(object):
         self.height = height 
         self.framerate = framerate
         self.runtime = runtime
+        self.sv_path = sv_path
 
-    def create_config(self):
         self.pipeline = rs.pipeline()
         self.config = rs.config()
-
+        self.create_stream()
+        
     def create_stream(self):
         r"""
         `self.config.enable_stream` function args
@@ -28,12 +29,15 @@ class D455(object):
         - format
         - framerate
         """
-        self.config.enable_stream(rs.stream.depth, self.width, self.height, rs.format.z16, self.framerate)
-        self.config.enable_stream(rs.stream.color, self.width, self.height, rs.format.bgr8, self.framerate)
+        self.config.enable_stream(rs.stream.depth, 
+            self.width, self.height, rs.format.z16, self.framerate)
+        self.config.enable_stream(rs.stream.color, 
+            self.width, self.height, rs.format.bgr8, self.framerate)
 
     def run(self):
-        self.create_config()
-        self.create_stream()
+        r"""
+        run the program
+        """
         self.pipeline.start(self.config)
 
         start_time = dt.now()
