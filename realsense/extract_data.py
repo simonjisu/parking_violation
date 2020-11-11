@@ -1,25 +1,61 @@
+from .utils import AppState
+
 from datetime import datetime as dt
 from datetime import timedelta
-import time
+from pathlib import Path
 import cv2
 import numpy as np
 import pyrealsense2 as rs
 
+
 class D455(object):
-    def __init__(self, width, height, framerate, runtime, sv_path):
+    def __init__(self, width, height, framerate, max_dist, sv_path):
         r"""
         Realsense camera pipeline
         """
         self.width = width
         self.height = height 
         self.framerate = framerate
-        self.runtime = runtime
+        self.max_dist = max_dist  # filter
         self.sv_path = sv_path
-
-        self.pipeline = rs.pipeline()
-        self.config = rs.config()
-        self.create_stream()
         
+        self.__state = None
+        self.__pipeline = None
+        self.__config = None
+        self.create_filter()
+#        self.create_stream()
+
+    @property
+    def state(self):
+        return self.__state
+    
+    @state.setter
+    def state(self, state):
+        self.__state = state
+
+    @property
+    def pipeline(self):
+        return self.__pipeline
+    
+    @pipeline.setter
+    def pipeline(self, pipeline):
+        self.__pipeline = pipeline
+
+    @property
+    def config(self):
+        return self.__config
+    
+    @config.setter
+    def config(self, config):
+        self.__config = config
+    
+    def create_filter(self):
+        self.th_filter = rs.threshold_filter(max_dist=self.max_dist)
+        self.sp_filter = rs.spatial_filter()
+        self.sp_filter.set_option(rs.option.filter_magnitude, 3.0)
+        self.sp_filter.set_option(rs.option.holes_fill, 2.0)
+        self.tmp_filter = rs.temporal_filter()
+
     def create_stream(self):
         r"""
         `self.config.enable_stream` function args
@@ -38,14 +74,7 @@ class D455(object):
         r"""
         run the program
         """
-        self.pipeline.start(self.config)
-
-        start_time = dt.now()
-        end_time = start_time + timedelta(seconds=self.runtime)
-        state = AppState()
-        
-        while (dt.now() - start_time).seconds <= self.runtime:
-
+        while self.state.start_app_btn:
             # Wait for a coherent pair of frames: depth and color
             frames = self.pipeline.wait_for_frames()
             depth_frame = frames.get_depth_frame()
@@ -62,47 +91,27 @@ class D455(object):
 
             # save images
 
-        
-            # Get stream profile and camera intrinsics
-            profile = self.pipeline.get_active_profile()
-            depth_profile = rs.video_stream_profile(profile.get_stream(rs.stream.depth))
-            depth_intrinsics = depth_profile.get_intrinsics()
-            w, h = depth_intrinsics.width, depth_intrinsics.height
+def main():
+    width, height, framerate =(640, 480, 30) 
+    max_dist = 2.5
+    sv_path = Path().absolute().parent.parent / "saved"
+    if not sv_path.exists():
+        sv_path.mkdir()
 
-            # Processing blocks
-            pc = rs.pointcloud()
-            decimate = rs.decimation_filter()
-            decimate.set_option(rs.option.filter_magnitude, 2 ** state.decimate)
-            colorizer = rs.colorizer()
+    cm = D455(width, height, framerate, max_dist, sv_path)
+    cm.state = AppState()
+    cm.pipeline = rs.pipeline()
+    cm.config = rs.config()
+    
+    cv2.namedWindow(cm.state.WIN_NAME, cv2.WINDOW_AUTOSIZE)
+    cv2.resizeWindow(cm.state.WIN_NAME, width, height)
+    cv2.setMouseCallback(cm.state.WIN_NAME, cm.state.mouse_btn)
 
+    cm.create_stream()
+    # start stream
+    cm.pipeline.start(cm.config)
+    while cm.state.start_app_btn:
+        cm.run()
 
-
-class AppState:
-
-    def __init__(self, *args, **kwargs):
-        self.WIN_NAME = 'RealSense'
-        self.pitch, self.yaw = np.radians(-10), np.radians(-15)
-        self.translation = np.array([0, 0, -1], dtype=np.float32)
-        self.distance = 2
-        self.prev_mouse = 0, 0
-        self.mouse_btns = [False, False, False]
-        self.paused = False
-        self.decimate = 1
-        self.scale = True
-        self.color = True
-
-    def reset(self):
-        self.pitch, self.yaw, self.distance = 0, 0, 2
-        self.translation[:] = 0, 0, -1
-
-    @property
-    def rotation(self):
-        Rx, _ = cv2.Rodrigues((self.pitch, 0, 0))
-        Ry, _ = cv2.Rodrigues((0, self.yaw, 0))
-        return np.dot(Ry, Rx).astype(np.float32)
-
-    @property
-    def pivot(self):
-        return self.translation + np.array((0, 0, self.distance), dtype=np.float32)
-
-
+if __name__ == "__main__":
+    main()
