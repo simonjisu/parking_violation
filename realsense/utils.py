@@ -10,24 +10,41 @@ class AppState(object):
         self.decimate = 1
         self.scale = True
         self.color = True
-        self.start_app_btn = False
-        self.start_record_btn = False
+        self.app_btn = True
+        self.record_btn = False
 
     def reset(self):
         self.pitch, self.yaw, self.distance = 0, 0, 2
         self.translation[:] = 0, 0, -1
 
-    def mouse_btn(self, event):
+    # def mouse_controll(self):
+    #     r"""
+    #     """
+    #     with mouse.Events() as events:
+    #         for event in events:
+    #             try: 
+    #                 if (event.button == mouse.Button.right) and (event.pressed == True):
+    #                     self.app_btn = not self.app_btn
+    #                     print(f"Running App: {self.app_btn}")
+    #                     break
+    #                 elif event.button == mouse.Button.left and (event.pressed == True):
+    #                     self.record_btn = not self.record_btn
+    #                     print(f"Recording: {self.record_btn}")
+    #                     break
+    #                 else:
+    #                     pass
+    #             except:
+    #                 continue
+
+    def mouse_controll(self, event, x, y, flags, param):
+
         if event == cv2.EVENT_LBUTTONDOWN:
-            self.start_app_btn = True
-        elif event == cv2.EVENT_LBUTTONDOWN:
-            self.start_app_btn = False
-        elif event == cv2.EVENT_RBUTTONDOWN:
-            self.start_record_btn = True
-        elif event == cv2.EVENT_RBUTTONDOWN:
-            self.start_record_btn = False
-        else:
-            pass
+            self.app_btn = not self.app_btn
+            print(f"Running App: {self.app_btn}")
+
+        if event == cv2.EVENT_RBUTTONDOWN:
+            self.record_btn = not self.record_btn
+            print(f"Running App: {self.record_btn}")        
 
     @property
     def rotation(self):
