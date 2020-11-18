@@ -20,6 +20,8 @@ def main():
         help="Save Img")
     parser.add_argument("-svpc", "--savepc", action="store_true",
         help="Save Point Cloud")
+    parser.add_argument("-svbag", "--savebag", action="store_true",
+        help="Save the video to bag file")
 
     args = parser.parse_args()
     sv_path = Path().absolute() / args.sv_path
@@ -33,7 +35,8 @@ def main():
         sv_path=sv_path,
         record_time=args.record_time,
         saveimg=args.saveimg,
-        savepc=args.savepc 
+        savepc=args.savepc,
+        savebag=args.savebag
     )
     camera.run_app()
 

@@ -9,7 +9,7 @@ from datetime import datetime as dt
 
 class D455(object):
     def __init__(self, width, height, framerate, max_dist, sv_path, 
-        record_time, saveimg, savepc):
+        record_time, saveimg, savepc, savebag):
         r"""
         Realsense camera pipeline
         """
@@ -21,9 +21,11 @@ class D455(object):
         self.record_time = record_time
         self.saveimg = saveimg
         self.savepc = savepc
+        self.savebag = savebag
 
         self.lane_detector = LaneDetector()
         self.pc = rs.pointcloud()
+        self.colorizer = rs.colorizer()
         self.create_filter()
         
 
@@ -52,25 +54,25 @@ class D455(object):
             depth_frame = self.sp_filter.process(depth_frame)
             depth_frame = self.tmp_filter.process(depth_frame)
 
+            depth_colormap = self.colorizer.colorize(depth_frame)
             # Convert images to numpy arrays
-            depth_image = np.asanyarray(depth_frame.get_data())
+            depth_image = np.asanyarray(depth_colormap.get_data())
             color_image = np.asanyarray(color_frame.get_data())
-
-            # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(
-                depth_image, alpha=0.1), cv2.COLORMAP_JET)
 
             lane_masked = self.lane_detector.detect(color_image)
             # Show images
-            stacked_imgs = (color_image, depth_colormap, lane_masked)
+            stacked_imgs = (color_image, depth_image, lane_masked)
             images = np.hstack(stacked_imgs)
             cv2.resizeWindow(state.WIN_NAME, 
                 self.width*len(stacked_imgs), 
                 self.height)
             cv2.imshow(state.WIN_NAME, images)
             cv2.setMouseCallback(state.WIN_NAME, state.mouse_controll)
-            cv2.waitKey(1)
-
+            key = cv2.waitKey(1)
+            if key == 27:
+                state.app_btn = False
+                state.record_btn = False
+                break
             # Calculate Runtime Tick to quit
             e2 = cv2.getTickCount()
             tick = int((e2 - e1) / cv2.getTickFrequency())
@@ -81,7 +83,7 @@ class D455(object):
                 ps_file = record_path / f"ps-{tick}.ply"
                 if not ps_file.exists():
                     np.save(color_file, color_image)
-                    np.save(depth_file, depth_colormap)
+                    np.save(depth_file, depth_image)
                     
                 # Create point cloud
                 if self.savepc and (not ps_file.exists()):
@@ -105,14 +107,6 @@ class D455(object):
         config = rs.config()
         screen = screeninfo.get_monitors()[0]
 
-        config.enable_stream(rs.stream.depth, 
-            self.width, self.height, rs.format.z16, self.framerate)
-        config.enable_stream(rs.stream.color, 
-            self.width, self.height, rs.format.bgr8, self.framerate)
-        
-        # Start stream
-        pipeline.start(config)
-
         while state.app_btn:
             # Make window full screen to make sure start with mouse click
             cv2.namedWindow(state.WIN_NAME, cv2.WND_PROP_FULLSCREEN)
@@ -120,13 +114,25 @@ class D455(object):
             cv2.setWindowProperty(state.WIN_NAME, cv2.WND_PROP_FULLSCREEN,
                                 cv2.WINDOW_FULLSCREEN)
             cv2.setMouseCallback(state.WIN_NAME, state.mouse_controll)
-            cv2.waitKey(1)
+            key = cv2.waitKey(1)
+            if key == 27:
+                state.app_btn = False
+                break
 
             if state.record_btn:
+                
                 folder = dt.now().strftime("record_%Y-%m-%d-%H-%M-%S")
                 record_path = self.sv_path / folder
                 if not record_path.exists():
                     record_path.mkdir()
+                # Config
+                config.enable_stream(rs.stream.depth, 
+                    self.width, self.height, rs.format.z16, self.framerate)
+                config.enable_stream(rs.stream.color, 
+                    self.width, self.height, rs.format.bgr8, self.framerate)
+                if self.savebag:
+                    config.enable_record_to_file(str(record_path / "bagrecord.bag"))
+                pipeline.start(config)
                 self.run_record(state, pipeline, record_path)
 
         if not state.app_btn:
