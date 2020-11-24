@@ -20,7 +20,7 @@ try:
     # Create a config object
     config = rs.config()
     # Tell config that we will use a recorded device from filem to be used by the pipeline through playback.
-    rs.config.enable_device_from_file(config, str(path / "test.bag"))
+    rs.config.enable_device_from_file(config, str(path / "bagrecord.bag"))
     # Configure the pipeline to stream the depth stream
     config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 
