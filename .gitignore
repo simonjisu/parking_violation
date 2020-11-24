@@ -4,3 +4,4 @@ saved
 *.ply
 *.npy
 *.pickle
+run_app.sh
