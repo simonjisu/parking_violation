@@ -49,7 +49,7 @@ try:
         depth_image = np.asanyarray(depth_color_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
         # Render image in opencv window
-        images = np.hstack((color_image. depth_image))
+        images = np.hstack((color_image, depth_image))
         cv2.imshow("Stream", images)
         key = cv2.waitKey(1)
         # if pressed escape exit program
