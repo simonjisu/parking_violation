@@ -42,7 +42,7 @@ class LaneFilter:
         self.color_cond1 = (self.s > self.sat_thresh) & (self.l > self.light_thresh)
         self.color_cond2 = self.l > self.light_thresh_agr
         b = self.z.copy()
-        b[(self.color_cond1 | self.color_cond2)] = 1
+        b[(self.color_cond1 | self.color_cond2)] = 1 * 255
         return b
 
     def apply_sobel_mask(self):       
@@ -55,5 +55,5 @@ class LaneFilter:
         self.sobel_cond1 = slm > self.mag_thresh
         self.sobel_cond2 = slx > self.x_thresh
         self.sobel_cond3 = (gradl > self.grad_min) & (gradl < self.grad_max)
-        b[(self.sobel_cond1 & self.sobel_cond2 & self.sobel_cond3)] = 1  
+        b[(self.sobel_cond1 & self.sobel_cond2 & self.sobel_cond3)] = 1 * 255
         return b 

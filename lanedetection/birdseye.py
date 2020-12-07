@@ -1,6 +1,6 @@
-from .helpers import show_dotted_image
 import cv2 
 import numpy as np 
+from .helpers import show_dotted_image
 
 class BirdsEye:
     def __init__(self, source_points, dest_points, cam_matrix, distortion_coef):
@@ -10,16 +10,14 @@ class BirdsEye:
         self.dest_points = np.array(dest_points, np.float32)
         self.cam_matrix = cam_matrix
         self.dist_coef = distortion_coef
-        
         self.warp_matrix = cv2.getPerspectiveTransform(self.src_points, self.dest_points)
         self.inv_warp_matrix = cv2.getPerspectiveTransform(self.dest_points, self.src_points)
 
     def undistort(self, raw_image, show_dotted = False):
         image = cv2.undistort(raw_image, self.cam_matrix, self.dist_coef, None, self.cam_matrix)
 
-        if show_dotted: 
+        if show_dotted:
             show_dotted_image(image, self.spoints)
-            
         return image 
 
     def sky_view(self, ground_image, show_dotted = False):
@@ -27,9 +25,8 @@ class BirdsEye:
         shape = (temp_image.shape[1], temp_image.shape[0])
         warp_image = cv2.warpPerspective(temp_image, self.warp_matrix, shape, flags = cv2.INTER_LINEAR)
 
-        if show_dotted: 
+        if show_dotted:
             show_dotted_image(warp_image, self.dpoints)
-
         return warp_image
 
     def project(self, ground_image, sky_lane, left_fit, right_fit, color = (0, 255, 0)):
