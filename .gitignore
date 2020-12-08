@@ -5,4 +5,3 @@ saved
 *.npy
 *.pickle
 run_app.sh
-*.png
