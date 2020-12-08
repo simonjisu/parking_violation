@@ -20,6 +20,20 @@ class Curves:
         self.left_radius, self.right_radius = None, None
         self.vehicle_position, self.vehicle_position_words = None, None
         self.result = {}
+
+        # color
+        self.color_dict = {
+            "white": {
+                "lower": np.array([np.round(  0 / 2), np.round(0.75 * 255), np.round(0.00 * 255)]),
+                "upper": np.array([np.round(360 / 2), np.round(1.00 * 255), np.round(0.30 * 255)]),
+                "color": (255, 255, 255)
+            },
+            "yellow": {
+                "lower": np.array([np.round( 40 / 2), np.round(0.47 * 255), np.round(0.16 * 255)]),
+                "upper": np.array([np.round( 60 / 2), np.round(1.00 * 255), np.round(1.00 * 255)]),
+                "color": (255, 255, 0)
+            }
+        }
         
     def store_details(self, binary):
         self.out_img = np.dstack((binary, binary, binary)) * 255
@@ -65,7 +79,31 @@ class Curves:
     def pixel_locations(self, indices):
         return self.all_pixels_x[indices], self.all_pixels_y[indices]
 
-    def plot(self, t = 4):
+    def get_line_mask(self, img, cdict):
+        r"""
+        get the mask of img
+        """
+        hsl_img = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+        mask = cv2.inRange(hsl_img, cdict["lower"], cdict["upper"])
+        return mask
+
+    def detect_line_color(self, bird_img, left_direction=True):
+        r"""
+        only support 2 color detection
+        """
+        line_img = np.zeros_like(bird_img)
+        if left_direction:
+            line_img[self.left_pixels_y, self.left_pixels_x] = bird_img[self.left_pixels_y, self.left_pixels_x]
+        else:
+            line_img[self.right_pixels_y, self.right_pixels_x] = bird_img[self.right_pixels_y, self.right_pixels_x]
+        white_mask = self.get_line_mask(line_img, self.color_dict["white"])
+        yellow_mask = self.get_line_mask(line_img, self.color_dict["yellow"])
+        if white_mask.sum() > yellow_mask.sum():
+            return self.color_dict["white"]["color"]
+        else:
+            return self.color_dict["yellow"]["color"]
+
+    def plot(self, bird_img, t = 4):
         self.out_img[self.left_pixels_y, self.left_pixels_x] = [255, 0, 255]
         self.out_img[self.right_pixels_y, self.right_pixels_x] = [0, 255, 255]
 
@@ -80,9 +118,12 @@ class Curves:
 
         xls, xrs, ys = left_xs.astype(np.uint32), right_xs.astype(np.uint32), ys.astype(np.uint32)
 
+        self.left_color = self.detect_line_color(bird_img, left_direction=True)
+        self.right_color = self.detect_line_color(bird_img, left_direction=False)
+
         for xl, xr, y in zip(xls, xrs, ys):
-            cv2.line(self.out_img, (xl - t, y), (xl + t, y), (255, 255, 0), int(t / 2))
-            cv2.line(self.out_img, (xr - t, y), (xr + t, y), (0, 0, 255), int(t / 2))
+            cv2.line(self.out_img, (xl - t, y), (xl + t, y), self.left_color, int(t / 2))
+            cv2.line(self.out_img, (xr - t, y), (xr + t, y), self.right_color, int(t / 2))
 
     def get_real_curvature(self, xs, ys):
         return np.polyfit(ys * self.ky, xs * self.kx, 2)
@@ -106,7 +147,7 @@ class Curves:
         else:
             self.vehicle_position_words = "at the center"
 
-    def fit(self, binary):
+    def fit(self, binary, bird_img):
         self.store_details(binary)
         mid_leftx, mid_rightx = self.start(binary)
 
@@ -143,19 +184,21 @@ class Curves:
         self.left_radius = self.radius_of_curvature(self.h * self.ky, self.left_fit_curve_f)
         self.right_radius = self.radius_of_curvature(self.h *  self.ky, self.right_fit_curve_f)
 
-        self.plot()
+        self.plot(bird_img)
         self.update_vehicle_position()
 
         self.result = {
-            'image': self.out_img,
-            'left_radius': self.left_radius,
-            'right_radius': self.right_radius,
-            'real_left_best_fit_curve': self.left_fit_curve_f,
-            'real_right_best_fit_curve': self.right_fit_curve_f, 
-            'pixel_left_best_fit_curve': self.left_fit_curve_pix,
-            'pixel_right_best_fit_curve': self.right_fit_curve_pix, 
-            'vehicle_position': self.vehicle_position, 
-            'vehicle_position_words': self.vehicle_position_words
+            "image": self.out_img,
+            "left_radius": self.left_radius,
+            "right_radius": self.right_radius,
+            "real_left_best_fit_curve": self.left_fit_curve_f,
+            "real_right_best_fit_curve": self.right_fit_curve_f, 
+            "pixel_left_best_fit_curve": self.left_fit_curve_pix,
+            "pixel_right_best_fit_curve": self.right_fit_curve_pix, 
+            "vehicle_position": self.vehicle_position, 
+            "vehicle_position_words": self.vehicle_position_words,
+            "left_color": self.left_color,
+            "right_color": self.right_color
         }
 
         return self.result

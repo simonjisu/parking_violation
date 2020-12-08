@@ -29,21 +29,25 @@ class BirdsEye:
             show_dotted_image(warp_image, self.dpoints)
         return warp_image
 
-    def project(self, ground_image, sky_lane, left_fit, right_fit, color = (0, 255, 0)):
-        z = np.zeros_like(sky_lane)
+    def project(self, ground_image, binary, left_fit, right_fit, left_color, right_color, 
+            fill_color=(0, 255, 0)):
+        z = np.zeros_like(binary)
         sky_lane = np.dstack((z, z, z))
 
         kl, kr = left_fit, right_fit
         h = sky_lane.shape[0]
         ys = np.linspace(0, h - 1, h)
-        lxs = kl[0] * (ys**2) + kl[1]* ys +  kl[2]
-        rxs = kr[0] * (ys**2) + kr[1]* ys +  kr[2]
-
-        pts_left = np.array([np.transpose(np.vstack([lxs, ys]))])
-        pts_right = np.array([np.flipud(np.transpose(np.vstack([rxs, ys])))])
+        xls = kl[0] * (ys**2) + kl[1]* ys +  kl[2]
+        xrs = kr[0] * (ys**2) + kr[1]* ys +  kr[2]
+        pts_left = np.array([np.transpose(np.vstack([xls, ys]))])
+        pts_right = np.array([np.flipud(np.transpose(np.vstack([xrs, ys])))])
         pts = np.hstack((pts_left, pts_right))
 
-        cv2.fillPoly(sky_lane, np.int_(pts), color)
+        cv2.fillPoly(sky_lane, np.int_(pts), fill_color)
+        for p in zip(xls, xrs, ys):
+            xl, xr, y = map(int, p)
+            cv2.line(sky_lane, (xl, y), (xl, y), left_color, thickness=10)
+            cv2.line(sky_lane, (xr, y), (xr, y), right_color, thickness=10)
 
         shape = (sky_lane.shape[1], sky_lane.shape[0])
         ground_lane = cv2.warpPerspective(sky_lane, self.inv_warp_matrix, shape)
