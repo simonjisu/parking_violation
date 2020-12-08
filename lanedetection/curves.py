@@ -2,12 +2,12 @@ import cv2
 import numpy as np
 
 class Curves:
-    def __init__(self, number_of_windows, margin, minimum_pixels, ym_per_pix, xm_per_pix):
+    def __init__(self, p):
 
-        self.min_pix = minimum_pixels
-        self.margin = margin
-        self.n = number_of_windows
-        self.ky, self.kx = ym_per_pix, xm_per_pix
+        self.min_pix = p["minimum_pixels"]
+        self.margin = p["margin"]
+        self.n = p["number_of_windows"]
+        self.ky, self.kx = p["ym_per_pix"], p["xm_per_pix"]
 
         self.binary, self.h, self.w, self.window_height = None, None, None, None
         self.all_pixels_x, self.all_pixels_y = None, None
@@ -99,9 +99,11 @@ class Curves:
         white_mask = self.get_line_mask(line_img, self.color_dict["white"])
         yellow_mask = self.get_line_mask(line_img, self.color_dict["yellow"])
         if white_mask.sum() > yellow_mask.sum():
-            return self.color_dict["white"]["color"]
+            c = "white"
         else:
-            return self.color_dict["yellow"]["color"]
+            c = "yellow"
+
+        return c, self.color_dict[c]["color"]
 
     def plot(self, bird_img, t = 4):
         self.out_img[self.left_pixels_y, self.left_pixels_x] = [255, 0, 255]
@@ -118,12 +120,12 @@ class Curves:
 
         xls, xrs, ys = left_xs.astype(np.uint32), right_xs.astype(np.uint32), ys.astype(np.uint32)
 
-        self.left_color = self.detect_line_color(bird_img, left_direction=True)
-        self.right_color = self.detect_line_color(bird_img, left_direction=False)
+        self.lc_txt, self.lc = self.detect_line_color(bird_img, left_direction=True)
+        self.rc_txt, self.rc = self.detect_line_color(bird_img, left_direction=False)
 
         for xl, xr, y in zip(xls, xrs, ys):
-            cv2.line(self.out_img, (xl - t, y), (xl + t, y), self.left_color, int(t / 2))
-            cv2.line(self.out_img, (xr - t, y), (xr + t, y), self.right_color, int(t / 2))
+            cv2.line(self.out_img, (xl - t, y), (xl + t, y), self.lc, int(t / 2))
+            cv2.line(self.out_img, (xr - t, y), (xr + t, y), self.rc, int(t / 2))
 
     def get_real_curvature(self, xs, ys):
         return np.polyfit(ys * self.ky, xs * self.kx, 2)
@@ -197,8 +199,8 @@ class Curves:
             "pixel_right_best_fit_curve": self.right_fit_curve_pix, 
             "vehicle_position": self.vehicle_position, 
             "vehicle_position_words": self.vehicle_position_words,
-            "left_color": self.left_color,
-            "right_color": self.right_color
+            "left_color": (self.lc_txt, self.lc),
+            "right_color": (self.rc_txt, self.rc)
         }
 
         return self.result
