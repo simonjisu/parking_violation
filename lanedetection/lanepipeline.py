@@ -32,7 +32,7 @@ class PipeLine:
         self.lanefilter = LaneFilter(params['lanefilter'])
         self.curves = Curves(params['curves'])
         
-    def process(self, frame):
+    def process(self, frame, rt_result=False):
         frame = resize_image(frame, self.w, self.h)
         ground_img = self.birdseye.undistort(frame)
         binary = self.lanefilter.apply(ground_img)
@@ -50,6 +50,9 @@ class PipeLine:
             result['left_color'][1], 
             result['right_color'][1]
         )
+        if rt_result:
+            return ground_img_with_projection, result
+            
         text_pos = f"vehicle position: {result['vehicle_position_words']}"
         text_l = f"left radius: {np.round(result['left_radius'], 2)} | color: {result['left_color'][0]}"
         text_r = f"right radius: {np.round(result['right_radius'], 2)} | color {result['right_color'][0]}"  
