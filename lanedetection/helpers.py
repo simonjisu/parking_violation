@@ -69,16 +69,16 @@ def check_rotation(video_path):
     """
     # this returns meta-data of the video file in form of a dictionary
     meta_dict = ffmpeg.probe(video_path)
-
-    # from the dictionary, meta_dict['streams'][0]['tags']['rotate'] is the key
-    # we are looking for
     rotate_code = None
-    if int(meta_dict['streams'][0]['tags']['rotate']) == 90:
-        rotate_code = cv2.ROTATE_90_CLOCKWISE
-    elif int(meta_dict['streams'][0]['tags']['rotate']) == 180:
-        rotate_code = cv2.ROTATE_180
-    elif int(meta_dict['streams'][0]['tags']['rotate']) == 270:
-        rotate_code = cv2.ROTATE_90_COUNTERCLOCKWISE
+    if meta_dict['streams'][0]['tags'].get('rotate'):
+        # from the dictionary, meta_dict['streams'][0]['tags']['rotate'] is the key
+        # we are looking for
+        if int(meta_dict['streams'][0]['tags']['rotate']) == 90:
+            rotate_code = cv2.ROTATE_90_CLOCKWISE
+        elif int(meta_dict['streams'][0]['tags']['rotate']) == 180:
+            rotate_code = cv2.ROTATE_180
+        elif int(meta_dict['streams'][0]['tags']['rotate']) == 270:
+            rotate_code = cv2.ROTATE_90_COUNTERCLOCKWISE
 
     return rotate_code
 
