@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from PIL import Image
 
 imreader = lambda path: np.array(Image.open(path))
