@@ -6,3 +6,4 @@ saved
 *.pickle
 run_app.sh
 .vscode
+*.log
